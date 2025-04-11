@@ -107,7 +107,6 @@ JOIN cuisines cu ON cu.cuisine_name IN (
 WHERE cu.cuisine_name IS NOT NULL;
 
 -- Let's CHECK RUNTIME
-
 -- Query 4 - Slow: Find restaurants by cuisine
 EXPLAIN ANALYZE
 SELECT r.restaurant_name, a.city, c.country, r.cuisines
