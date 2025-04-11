@@ -75,6 +75,9 @@ FROM '/tmp/Country-Code.csv'
 DELIMITER ',' 
 CSV HEADER;
 
+-- Verify if the country codes are loaded correctly
+SELECT * FROM countries;
+
 -- Create separate table for restaurant addresses and location info
 CREATE TABLE restaurant_address (
     restaurant_id INT PRIMARY KEY,
@@ -92,6 +95,9 @@ INSERT INTO restaurant_address (restaurant_id, country_code, city, address, loca
 SELECT restaurant_id, country_code, city, address, locality
 FROM restaurants;
 
+-- Verify if the address data is inserted correctly
+SELECT * FROM restaurant_address
+
 -- Create table for storing geographical coordinates
 CREATE TABLE coordinates (
     restaurant_id INT PRIMARY KEY,
@@ -107,6 +113,9 @@ CREATE TABLE coordinates (
 INSERT INTO coordinates (restaurant_id, country_code, longitude, latitude)
 SELECT restaurant_id, country_code, longitude, latitude
 FROM restaurants;
+
+-- Verify if the coordinates are inserted correctly
+SELECT * FROM coordinates;
 
 -- Create table for ratings and pricing info
 CREATE TABLE rating (
@@ -126,8 +135,8 @@ INSERT INTO rating (restaurant_id, price_range, aggregate_rating, rating_color, 
 SELECT restaurant_id, price_range, aggregate_rating, rating_color, rating_text, votes, currency
 FROM restaurants;
 
--- Verify if the 'currency' column is added correctly to rating tables
-SELECT currency, restaurant_id FROM rating;
+-- Verify if the rating data is inserted correctly
+SELECT * FROM rating;
 
 -- Drop redundant columns from the main restaurants table
 ALTER TABLE restaurants 
@@ -150,6 +159,7 @@ DROP COLUMN rating_text,
 DROP COLUMN votes;
 
 -- In the end, restaurants table remain with restaurant id and name, cuisines and average cost for two.
+SELECT * FROM restaurants;
 
 -- Final verification queries to check that the data was split correctly
 SELECT * FROM restaurants;

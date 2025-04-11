@@ -19,6 +19,38 @@ ORDER BY total_restaurants DESC;
 
 --------------------------------------------------------------------
 
+-- Query 6 - Slow: Find highest-rated restaurant by aggregate rating
+EXPLAIN ANALYZE
+WITH max_rating AS (
+    SELECT MAX(aggregate_rating) AS max_val FROM rating
+)
+SELECT c.country, r.restaurant_name, rt.aggregate_rating
+FROM restaurants r
+JOIN rating rt ON r.restaurant_id = rt.restaurant_id
+JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
+JOIN countries c ON a.country_code = c.country_code
+WHERE rt.aggregate_rating = (SELECT max_val FROM max_rating)
+ORDER BY c.country, r.restaurant_name;
+
+-- Query 6 - Optimized: Find highest-rated restaurant by aggregate rating (Uses materialized view)
+DROP MATERIALIZED VIEW IF EXISTS top_rated_restaurants;
+
+CREATE MATERIALIZED VIEW top_rated_restaurants AS
+WITH max_rating AS (
+    SELECT MAX(aggregate_rating) AS max_val FROM rating
+)
+SELECT c.country, r.restaurant_name, rt.aggregate_rating
+FROM restaurants r
+JOIN rating rt ON r.restaurant_id = rt.restaurant_id
+JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
+JOIN countries c ON a.country_code = c.country_code
+WHERE rt.aggregate_rating = (SELECT max_val FROM max_rating);
+
+EXPLAIN ANALYZE
+SELECT * FROM top_rated_restaurants;
+
+--------------------------------------------------------------------
+
 -- Query 4 - Slow: Find restaurants by cuisine
 EXPLAIN ANALYZE
 SELECT r.restaurant_name, a.city, c.country, r.cuisines
@@ -74,7 +106,6 @@ JOIN cuisines cu ON cu.cuisine_name IN (
 )
 WHERE cu.cuisine_name IS NOT NULL;
 
-
 -- Let's CHECK RUNTIME
 
 -- Query 4 - Slow: Find restaurants by cuisine
@@ -95,38 +126,3 @@ JOIN countries c ON a.country_code = c.country_code
 JOIN restaurant_cuisines rc ON r.restaurant_id = rc.restaurant_id
 JOIN cuisines cu ON rc.cuisine_id = cu.cuisine_id
 WHERE cu.cuisine_name ILIKE 'Italian%' OR cu.cuisine_name ILIKE 'Japanese%';
-
-
---------------------------------------------------------------------
-
--- Query 6 - Slow: Find highest-rated restaurant by aggregate rating
-EXPLAIN ANALYZE
-WITH max_rating AS (
-    SELECT MAX(aggregate_rating) AS max_val FROM rating
-)
-SELECT c.country, r.restaurant_name, rt.aggregate_rating
-FROM restaurants r
-JOIN rating rt ON r.restaurant_id = rt.restaurant_id
-JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
-JOIN countries c ON a.country_code = c.country_code
-WHERE rt.aggregate_rating = (SELECT max_val FROM max_rating)
-ORDER BY c.country, r.restaurant_name;
-
--- Query 6 - Optimized: Find highest-rated restaurant by aggregate rating (Uses materialized view)
-DROP MATERIALIZED VIEW IF EXISTS top_rated_restaurants;
-
-CREATE MATERIALIZED VIEW top_rated_restaurants AS
-WITH max_rating AS (
-    SELECT MAX(aggregate_rating) AS max_val FROM rating
-)
-SELECT c.country, r.restaurant_name, rt.aggregate_rating
-FROM restaurants r
-JOIN rating rt ON r.restaurant_id = rt.restaurant_id
-JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
-JOIN countries c ON a.country_code = c.country_code
-WHERE rt.aggregate_rating = (SELECT max_val FROM max_rating);
-
-EXPLAIN ANALYZE
-SELECT * FROM top_rated_restaurants;
-
---------------------------------------------------------------------

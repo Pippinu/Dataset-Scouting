@@ -30,7 +30,7 @@ JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
 WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%';
 
--- 5. Get average rating per country
+-- 5. Get average rating per country that has an average rating greater than 4
 SELECT c.country, ROUND(CAST(AVG(rt.aggregate_rating) AS NUMERIC), 2) AS avg_rating
 FROM restaurants r
 JOIN rating rt ON r.restaurant_id = rt.restaurant_id
@@ -58,15 +58,14 @@ JOIN rating rt ON r.restaurant_id = rt.restaurant_id
 WHERE rt.aggregate_rating > 4.5 AND rt.votes > 1000
 ORDER BY rt.aggregate_rating DESC, rt.votes DESC;
 
--- 8. Find closest restaurants to a given location
--- Updated: Find closest restaurants using a bounding box and a simple distance metric
+-- 8. Find closest restaurants using a bounding box and a simple distance metric (Euclidean distance)
 SELECT 
     r.restaurant_name, 
     a.city, 
     c.country, 
     co.longitude, 
     co.latitude,
-    (POW(co.longitude - (-74.0060), 2) + POW(co.latitude - 40.7128, 2)) AS distance_metric
+    ROUND(CAST((POW(co.longitude - (-78), 2) + POW(co.latitude - 38, 2)) AS NUMERIC), 2) AS distance_metric
 FROM restaurants r
 JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
