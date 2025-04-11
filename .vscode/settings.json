@@ -5,17 +5,8 @@
             "server": "localhost",
             "port": 5432,
             "driver": "PostgreSQL",
-            "name": "alessio",
-            "username": "alessio",
-            "database": "try"
-        },
-        {
-            "previewLimit": 50,
-            "server": "localhost",
-            "port": 5432,
-            "driver": "PostgreSQL",
-            "name": "postgres",
-            "database": "try",
+            "name": "Postgres Default",
+            "database": "postgres",
             "username": "postgres"
         },
         {
@@ -23,8 +14,8 @@
             "server": "localhost",
             "port": 5432,
             "driver": "PostgreSQL",
-            "name": "Postgres Default",
-            "database": "postgres",
+            "name": "backup - postgres",
+            "database": "try",
             "username": "postgres"
         }
     ]

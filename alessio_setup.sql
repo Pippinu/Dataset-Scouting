@@ -1,3 +1,10 @@
+--  Drop all tables if they exist to restart the setup
+DROP TABLE IF EXISTS rating CASCADE;
+DROP TABLE IF EXISTS coordinates CASCADE;
+DROP TABLE IF EXISTS restaurant_address CASCADE;
+DROP TABLE IF EXISTS countries CASCADE;
+DROP TABLE IF EXISTS restaurants CASCADE;
+
 -- Create the main 'restaurants' table
 CREATE TABLE restaurants (
     restaurant_id INT PRIMARY KEY,
@@ -141,6 +148,8 @@ DROP COLUMN aggregate_rating,
 DROP COLUMN rating_color,
 DROP COLUMN rating_text,
 DROP COLUMN votes;
+
+-- In the end, restaurants table remain with restaurant id and name, cuisines and average cost for two.
 
 -- Final verification queries to check that the data was split correctly
 SELECT * FROM restaurants;
