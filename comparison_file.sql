@@ -52,22 +52,24 @@ SELECT * FROM top_rated_restaurants;
 --------------------------------------------------------------------
 
 -- Query 4 - Slow: Find restaurants by cuisine
-EXPLAIN ANALYZE
+-- EXPLAIN ANALYZE
 SELECT r.restaurant_name, a.city, c.country, r.cuisines
 FROM restaurants r
 JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
-WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%';
--- Query 4 - Optimized: Find restaurants by cuisine (Uses index on cuisines)
+WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%'
+ORDER BY r.restaurant_name;
 
+-- Query 4 - Optimized: Find restaurants by cuisine (Uses index on cuisines)
 CREATE INDEX IF NOT EXISTS idx_cuisines ON restaurants (cuisines);
 
-EXPLAIN ANALYZE
+-- EXPLAIN ANALYZE
 SELECT r.restaurant_name, a.city, c.country, r.cuisines
 FROM restaurants r
 JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
-WHERE r.cuisines LIKE 'Italian%' OR r.cuisines LIKE 'Japanese%';
+WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%'
+ORDER BY r.restaurant_name;
 
 
 -- ALTERNATIVE OPTIMIZATION for Query 4 (Uses a separate cuisines table and restaurant-cuisines joint table)
@@ -113,15 +115,27 @@ SELECT r.restaurant_name, a.city, c.country, r.cuisines
 FROM restaurants r
 JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
-WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%';
+WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%'
+ORDER BY r.restaurant_name;
 
+-- Query 4 - Optimized (INDEX)
+CREATE INDEX IF NOT EXISTS idx_cuisines ON restaurants (cuisines);
 
--- Query 4 - Optimized: Find restaurants by cuisine
 EXPLAIN ANALYZE
-SELECT r.restaurant_name, a.city, c.country, cu.cuisine_name
+SELECT DISTINCT r.restaurant_name, a.city, c.country, r.cuisines
+FROM restaurants r
+JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
+JOIN countries c ON a.country_code = c.country_code
+WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%'
+ORDER BY r.restaurant_name;
+
+-- Query 4 - Optimized (NEW TABLES)
+EXPLAIN ANALYZE
+SELECT DISTINCT r.restaurant_name, a.city, c.country, cu.cuisine_name
 FROM restaurants r
 JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
 JOIN restaurant_cuisines rc ON r.restaurant_id = rc.restaurant_id
 JOIN cuisines cu ON rc.cuisine_id = cu.cuisine_id
-WHERE cu.cuisine_name ILIKE 'Italian%' OR cu.cuisine_name ILIKE 'Japanese%';
+WHERE cu.cuisine_name ILIKE '%Italian%' OR cu.cuisine_name ILIKE '%Japanese%'
+ORDER BY r.restaurant_name; 

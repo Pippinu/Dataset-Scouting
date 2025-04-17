@@ -32,6 +32,11 @@ CREATE TABLE restaurants (
 );
 
 -- Load data from the main CSV file into the 'restaurants' table
+-- N.B. Ensure the CSV file is correctly formatted and accessible
+
+-- To correctly load the CSV file, ensure that, to have the correct permissions:
+-- The CSV file is placed in the '/tmp/' directory for LINUX
+-- The CSV file is placed in user/public directory for WINDOWS
 COPY restaurants (
     restaurant_id, 
     restaurant_name, 
