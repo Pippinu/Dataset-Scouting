@@ -73,7 +73,7 @@ JOIN coordinates co ON r.restaurant_id = co.restaurant_id
 WHERE co.longitude BETWEEN -82.5 AND -74.5
   AND co.latitude BETWEEN 33 AND 44
 ORDER BY distance_metric ASC
-LIMIT 5;
+LIMIT 10;
 
 -- 9. Get restaurants with the highest rating in each price range
 SELECT ranked.price_range, ranked.restaurant_name, ranked.aggregate_rating
