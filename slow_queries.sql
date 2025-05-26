@@ -28,7 +28,8 @@ SELECT r.restaurant_name, a.city, c.country, r.cuisines
 FROM restaurants r
 JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
-WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%';
+WHERE r.cuisines ILIKE '%Italian%' OR r.cuisines ILIKE '%Japanese%'
+ORDER BY r.restaurant_name; -- Added later for clarity, not present in original query
 
 -- 5. Get average rating per country that has an average rating greater than 4
 SELECT c.country, ROUND(CAST(AVG(rt.aggregate_rating) AS NUMERIC), 2) AS avg_rating
@@ -75,10 +76,10 @@ WHERE co.longitude BETWEEN -82.5 AND -74.5
 ORDER BY distance_metric ASC
 LIMIT 10;
 
--- 9. Get restaurants with the highest rating in each price range
-SELECT ranked.price_range, ranked.restaurant_name, ranked.aggregate_rating
+-- 9. Get restaurants with the highest rating in each price range (Wrong)
+SELECT DISTINCT ranked.price_range, ranked.restaurant_name, ranked.aggregate_rating, ranked.votes
 FROM (
-    SELECT rt.price_range, r.restaurant_name, rt.aggregate_rating,
+    SELECT rt.price_range, r.restaurant_name, rt.aggregate_rating, rt.votes,
            RANK() OVER (PARTITION BY rt.price_range ORDER BY rt.aggregate_rating DESC) AS rank
     FROM restaurants r
     JOIN rating rt ON r.restaurant_id = rt.restaurant_id
@@ -86,7 +87,20 @@ FROM (
 WHERE rank = 1
 LIMIT 5;
 
--- 10. Find the restaurant with the highest rating in database
+-- 9. Get restaurants with the highest rating in each price range (Corrected)
+SELECT
+    ranked.price_range, ranked.restaurant_name, ranked.aggregate_rating, ranked.votes
+FROM (
+    SELECT rt.price_range, r.restaurant_name, rt.aggregate_rating, rt.votes,
+        RANK() OVER (PARTITION BY rt.price_range ORDER BY rt.aggregate_rating DESC, rt.votes DESC) AS rank
+        -- Added rt.votes DESC for tie-breaking within the same rating
+    FROM restaurants r
+    JOIN rating rt ON r.restaurant_id = rt.restaurant_id
+) ranked
+WHERE ranked.rank = 1
+ORDER BY ranked.price_range ASC -- Order by price_range before limiting
+
+-- 10. Find the restaurant with the highest rating in database (To show usage of WITH clause)
 WITH max_rating AS (
     SELECT MAX(aggregate_rating) AS max_val FROM rating
 )
@@ -96,4 +110,13 @@ JOIN rating rt ON r.restaurant_id = rt.restaurant_id
 JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
 JOIN countries c ON a.country_code = c.country_code
 WHERE rt.aggregate_rating = (SELECT max_val FROM max_rating)
+ORDER BY c.country, r.restaurant_name;
+
+-- 10. Alternative
+SELECT c.country, r.restaurant_name, rt.aggregate_rating
+FROM restaurants r
+JOIN rating rt ON r.restaurant_id = rt.restaurant_id
+JOIN restaurant_address a ON r.restaurant_id = a.restaurant_id
+JOIN countries c ON a.country_code = c.country_code
+WHERE rt.aggregate_rating = (SELECT MAX(aggregate_rating) FROM rating)
 ORDER BY c.country, r.restaurant_name;

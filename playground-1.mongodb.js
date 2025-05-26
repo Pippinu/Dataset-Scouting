@@ -1,15 +1,17 @@
-// The current database to use. NOT NEEDED ANYMORE
-// use("Restaurant_DB");
+// SINGLE COLLECTION QUERIES
 
 // SQL Query 1: Get the price range distribution of restaurants
 const pipeline_q1 = [
     {
+      // Group by price range and count the number of restaurants in each range
       $group: {
         _id: "$rating_details.price_range",
         total: { $sum: 1 }
       }
     },
+    // Sort by price range in ascending order
     { $sort: { _id: 1 } },
+    // Project the desired fields
     {
       $project: {
         _id: 0,
@@ -23,12 +25,15 @@ db.restaurants.aggregate(pipeline_q1);
 // SQL Query 2: Count the number of restaurants per country
 const pipeline_q2 = [
   {
+    // Group by country and count the number of restaurants in each country
     $group: {
       _id: "$address.country_name",
       total_restaurants: { $sum: 1 }
     }
   },
+  // Sort by total_restaurants in descending order
   { $sort: { total_restaurants: -1 } },
+  // Project the desired fields
   {
     $project: {
       _id: 0,
@@ -42,11 +47,13 @@ db.restaurants.aggregate(pipeline_q2);
 // SQL Query 3: Find the most voted restaurant in each country
 const pipeline_q3 = [
   {
+    // Sort by country and votes in ascending order and descending order, respectively
     $sort: {
       "address.country_name": 1,
       "rating_details.votes": -1
     }
   },
+  // Group by country and get the first restaurant name and votes
   {
     $group: {
       _id: "$address.country_name",
@@ -54,7 +61,10 @@ const pipeline_q3 = [
       votes: { $first: "$rating_details.votes" }
     }
   },
+  // Sort by country name in ascending order
   { $sort: { _id: 1 } },
+  // Project country name, restaurant name, and votes fields
+  // Exclude the default _id field (otherwise included by default)
   {
     $project: {
       _id: 0,
@@ -68,148 +78,152 @@ db.restaurants.aggregate(pipeline_q3);
 
 // SQL Query 4: Find restaurants by cuisine (e.g., Italian or Japanese)"
 const pipeline_q4 = [
+    // Match documents where the cuisines field contains either Italian or Japanese
     {
-        $match: {
-            // Use regex for case-insensitive matching on array elements
-            cuisines: { $in: [/Italian/i, /Japanese/i] }
-        }
+      $match: {
+          // Use regex for case-insensitive to match Italian or Japanese
+          cuisines: { $in: [/Italian/i, /Japanese/i] }
+      }
     },
+    // Project the desired fields
+    // Exclude the default _id field (otherwise included by default)
     {
-        $project: {
-            _id: 0,
-            restaurant_name: 1,
-            "address.city": 1,
-            "address.country_name": 1,
-            cuisines: 1
-        }
+      $project: {
+          _id: 0,
+          restaurant_name: 1,
+          "address.city": 1,
+          "address.country_name": 1,
+          cuisines: 1
+      }
     },
+    // Sort by restaurant name in ascending order
     { $sort: { restaurant_name: 1 } }
 ];
 db.restaurants.aggregate(pipeline_q4);
 
 // SQL Query 5: Get average rating per country that has an average rating greater than 4
 const pipeline_q5 = [
+  // Group by country and calculate the average rating
   {
     $group: {
       _id: "$address.country_name",
+      // Compute the average rating using $avg on the aggregate_rating field 
+      // and assign it to avg_rating new field
       avg_rating: { $avg: "$rating_details.aggregate_rating" }
     }
   },
+  // Match countries with an average rating greater than 4
   { $match: { avg_rating: { $gt: 4 } } },
   {
     $project: {
       _id: 0,
       country: "$_id",
+      // Round the average rating to 2 decimal places
       avg_rating: { $round: ["$avg_rating", 2] }
     }
   },
+  // Sort by average rating in descending order
   { $sort: { avg_rating: -1 } }
 ];  
 db.restaurants.aggregate(pipeline_q5);
 
-// SQL Query 6: Find restaurants with online delivery AND table booking
+// SQL Query 6: Find the highest rated restaurant in each country
 const pipeline_q6 = [
-    {
-        $match: {
-            has_online_delivery: true,
-            has_table_booking: true
-        }
-    },
-    {
-        $project: {
-            _id: 0,
-            restaurant_name: 1,
-            "address.city": 1,
-            "address.country_name": 1
-        }
+  {
+    // 1. Ordina per paese (A-Z) e poi per rating (dal più alto al più basso)
+    $sort: {
+      "address.country_name": 1,
+      "rating_details.aggregate_rating": -1
     }
+  },
+  {
+    // 2. Raggruppa per paese e prendi i dati del primo documento di ogni gruppo
+    // (che sarà quello con il rating più alto grazie al sort precedente)
+    $group: {
+      _id: "$address.country_name",
+      restaurant_name: { $first: "$restaurant_name" },
+      aggregate_rating: { $first: "$rating_details.aggregate_rating" }
+    }
+  },
+  {
+    // 3. (Opzionale) Rinomina i campi per un output più pulito
+    $project: {
+      _id: 0,
+      country: "$_id",
+      restaurant_name: 1,
+      aggregate_rating: 1
+    }
+  },
+  {
+      // 4. (Opzionale) Ordina il risultato finale per nome del paese
+      $sort: { country: 1 }
+  }
 ];
 db.restaurants.aggregate(pipeline_q6);
 
-// SQL Query 7: Find restaurants that offer online delivery OR table booking
-// Note: Assumes 'has_online_delivery' and 'has_table_booking' fields exist.
+// SQL Query 7: Find restaurants that have both high ratings (at least 4.5) and a lot of votes (more than 1000)
 const pipeline_q7 = [
-    {
-        $match: {
-            $or: [
-                { has_online_delivery: true },
-                { has_table_booking: true }
-            ]
-        }
-    },
-    {
-        $project: {
-            _id: 0,
-            restaurant_name: 1,
-            "address.city": 1,
-            "address.country_name": 1
-        }
+  {
+    // Match documents that have aggregate_rating > 4.5 and votes > 1000
+    $match: {
+      "rating_details.aggregate_rating": { $gt: 4.5 }, // $gt "greater than"
+      "rating_details.votes": { $gt: 1000 }
     }
+  },
+  {
+    // Project the desired fields
+    // Exclude the default _id field (otherwise included by default)
+    $project: {
+      _id: 0,
+      restaurant_name: 1,
+      aggregate_rating: "$rating_details.aggregate_rating",
+      votes: "$rating_details.votes"
+    }
+  },
+  {
+    // Sort by aggregate_rating and votes in descending order
+    $sort: {
+      aggregate_rating: -1,
+      votes: -1
+    }
+  }
 ];
 db.restaurants.aggregate(pipeline_q7);
-  
-// TO BE FIXED
-// SQL Query 8: Find 5 closest restaurants to a given location (e.g., Long: -78, Lat: 38)
-// First, ensure you have a 2dsphere index: db.restaurants.createIndex({ "location": "2dsphere" })
 
-// db.restaurants.createIndex({ "location": "2dsphere" })
+// SQL Query 8: Find near restaurants from a given point (e.g., longitude -78, latitude 38)
 
-// const pipeline_q8 = [
-//     {
-//         $geoNear: {
-//             near: {
-//                 type: "Point",
-//                 coordinates: [-78, 38]
-//             },
-//             distanceField: "distance",
-//             spherical: true
-//         }
-//     },
-//     {
-//         $project: {
-//             _id: 0,
-//             restaurant_name: 1,
-//             "address.city": 1,
-//             "address.country_name": 1,
-//             longitude: { $arrayElemAt: ["$location.coordinates", 0] },
-//             latitude: { $arrayElemAt: ["$location.coordinates", 1] }
-//         }
-//     },
-//     { $sort: { distance: 1 } },
-//     { $limit: 5 }
-// ];
+// 1. Create a 2dsphere index on the 'location' field
+db.restaurants.createIndex({ location: "2dsphere" }, { name: "location_2dsphere" });
 
-// 1. Define the target coordinates for Query 8
+// 2. Define the target coordinates for Query 8
 const targetLongitude_q8 = -78;
 const targetLatitude_q8 = 38;
 
-// 2. Define the aggregation pipeline for Query 8
+// 3. Define the aggregation pipeline for Query 8
 const pipeline_q8 = [
   {
-    // Stage 1: Perform the geospatial search
+    // Perform the geospatial search using $geoNear
     // $geoNear MUST be the first stage in an aggregation pipeline if used.
-    // It requires a 2dsphere index on the 'key' field.
     $geoNear: {
-      near: { // The point to search near
+      // The point to search near
+      near: { 
         type: "Point",
         coordinates: [targetLongitude_q8, targetLatitude_q8] // [longitude, latitude]
       },
       distanceField: "distance", // Output field that contains the calculated distance
-                                 // The distance is in meters if coordinates are GeoJSON.
+                                 // in meters, given that coordinates are GeoJSON.
       spherical: true,           // Required for 2dsphere indexes
       query: {}                  // Optional: Additional filter criteria for documents
                                  // e.g., { "address.city": "SomeCity" }
-      // Optional: maxDistance: <distance_in_meters> // To limit search radius
-      // e.g., maxDistance: 50000 // 50 kilometers
     }
   },
   {
-    // Stage 2: Limit the results (as per original SQL query)
+    // Limit the results to 10
     $limit: 10
   },
   {
-    // Stage 3: Project the desired fields
-    // Now we can use aggregation expressions like $arrayElemAt
+    // Project the desired fields
+    // $arrayElemAt to get longitude and latitude from the coordinates array
     $project: {
       _id: 0, // Exclude the default _id
       restaurant_name: 1, // Include restaurant_name
@@ -228,7 +242,7 @@ db.restaurants.aggregate(pipeline_q8);
 
 // ALTERNATIVE TO BE EQUAL TO SQL COUNTERPART
 
-// MongoDB Playground - Query 8: Bounding Box & Custom Distance Metric (More Robust)
+// SQ; Query 8: Bounding Box & Custom Distance Metric (More Robust)
 // 1. Define the target coordinates for distance calculation (from SQL query)
 const targetLongitude_q8_sql = -78;
 const targetLatitude_q8_sql = 38;
@@ -327,67 +341,41 @@ const pipeline_q8_alternative = [
     }
   }
 ];
-
-// 4. Execute the aggregation query
-// Make sure your collection name is correct (e.g., 'restaurants')
 db.restaurants.aggregate(pipeline_q8_alternative);
 
-// SCHEMA UPDATE, MIGHT NOT WORK
-// --- To find documents with potentially malformed coordinates that were filtered out ---
-/*
-const findMalformedCoordinatesPipeline = [
-  {
-    $match: { // Initial bounding box filter
-      $and: [
-        { "location.coordinates.0": { $gte: minLongitude_sql, $lte: maxLongitude_sql } },
-        { "location.coordinates.1": { $gte: minLatitude_sql, $lte: maxLatitude_sql } }
-      ]
-    }
-  },
-  {
-    $project: {
-      _id: 1,
-      restaurant_id: "$restaurant_id", // Assuming you have this field
-      location_coordinates: "$location.coordinates",
-      longitude_type: { $type: { $arrayElemAt: ["$location.coordinates", 0] } },
-      latitude_type: { $type: { $arrayElemAt: ["$location.coordinates", 1] } }
-    }
-  },
-  {
-    $match: { // Filter for documents where extracted coordinates are NOT numbers
-      $or: [
-        { longitude_type: { $ne: "double" } },
-        { latitude_type: { $ne: "double" } }
-      ]
-    }
-  }
-];
-// db.restaurants.aggregate(findMalformedCoordinatesPipeline);
-*/
-
+// DA SISTEMARE, vedi note goodnotes
 // SQL Query 9: Get restaurants with the highest rating in each price range (top 5 price ranges)
 const pipeline_q9 = [
   {
+    // Sort by aggregate rating in descending order and votes 
+    // (in case of ties in aggregate_rating) in descending order
     $sort: {
-      "rating_details.price_range": 1,
-      "rating_details.aggregate_rating": -1
+      "rating_details.aggregate_rating": -1,
+      "rating_details.votes": -1 
     }
   },
   {
+    // Group by price range and get the best (first given the previous sort) 
+    // restaurant in each price range
     $group: {
       _id: "$rating_details.price_range",
       restaurant_name: { $first: "$restaurant_name" },
-      aggregate_rating: { $first: "$rating_details.aggregate_rating" }
+      aggregate_rating: { $first: "$rating_details.aggregate_rating" },
+      votes: { $first: "$rating_details.votes" } // Carry votes through
     }
   },
-  { $sort: { _id: 1 } },
-  { $limit: 5 },
   {
+    // Sort in ascending order for price range.
+    $sort: { _id: 1 }
+  },
+  {
+    // Project the desired fields.
     $project: {
       _id: 0,
       price_range: "$_id",
       restaurant_name: 1,
-      aggregate_rating: 1
+      aggregate_rating: 1,
+      votes: 1
     }
   }
 ];
@@ -396,6 +384,7 @@ db.restaurants.aggregate(pipeline_q9);
 // SQL Query 10: Find the restaurant(s) with the highest rating in the database
 const pipeline_q10 = [
   {
+    // 
     $group: {
       _id: null,
       max_overall_rating: { $max: "$rating_details.aggregate_rating" },
@@ -420,10 +409,3 @@ const pipeline_q10 = [
   { $sort: { country: 1, restaurant_name: 1 } }
 ];
 db.restaurants.aggregate(pipeline_q10);
-
-
-// Find restaurant with restaurant_id = 6314302
-db.restaurants.find({
-  restaurant_id: 6314302
-  }
-);
